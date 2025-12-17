@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap, Trash2 } from 'lucide-react';
+import { X, Zap, Trash2, Repeat } from 'lucide-react';
 import type { Priority, Category, Task } from '../types';
 
 interface EditTaskModalProps {
@@ -20,6 +20,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onUpdate
     const [dueTime, setDueTime] = useState('');
     const [autoRemind, setAutoRemind] = useState(false);
     const [reminderTime, setReminderTime] = useState('');
+    const [recurring, setRecurring] = useState(false);
 
     // Initialize form with task data
     useEffect(() => {
@@ -32,6 +33,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onUpdate
             setDueTime(task.dueTime || '');
             setAutoRemind(!!task.reminder);
             setReminderTime(task.reminder || '');
+            setRecurring(!!task.recurring);
         }
     }, [task]);
 
@@ -70,7 +72,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onUpdate
             category,
             dueDate: dueDate || undefined,
             dueTime: dueTime || undefined,
-            reminder: autoRemind ? reminderTime : undefined
+            reminder: autoRemind ? reminderTime : undefined,
+            recurring
         });
 
         onClose();
@@ -206,6 +209,35 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onUpdate
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Recurring Task Toggle */}
+                            {dueDate && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div
+                                        onClick={() => setRecurring(!recurring)}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            background: recurring ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-tertiary)',
+                                            border: `1px solid ${recurring ? 'var(--accent-info)' : 'transparent'} `,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            cursor: 'pointer'
+                                        }}>
+                                        <div style={{ color: recurring ? 'var(--accent-info)' : 'var(--text-secondary)' }}>
+                                            <Repeat size={20} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '14px', fontWeight: 500, color: recurring ? 'var(--accent-info)' : 'var(--text-primary)' }}>Repeat Daily</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                Task will reappear daily when completed
+                                            </div>
+                                        </div>
+                                        {recurring && <Checkmark />}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Smart Reminder Toggle */}
                             {dueDate && (

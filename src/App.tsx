@@ -14,31 +14,60 @@ import { notificationService } from './services/notificationService';
 import type { Task } from './types';
 
 function App() {
-  const { tasks, addTask, toggleTask, deleteTask, postponeTask, updateTask } = useTasks();
+  const { tasks, addTask, toggleTask, deleteTask, updateTask } = useTasks();
   const { settings } = useNotificationSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // Request notification permission on mount
+  // Permissions are now handled in Settings page on user interaction
   useEffect(() => {
-    if (settings.enabled) {
-      notificationService.requestPermission();
+    // Only verify permission status, don't request
+    if (settings.enabled && 'Notification' in window && Notification.permission !== 'granted') {
+      // Optionally disable setting if permission was revoked, or just do nothing
     }
   }, [settings.enabled]);
 
+  // Handle splash screen
+  useEffect(() => {
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+      // Minimum display time for splash screen (e.g. 500ms)
+      setTimeout(() => {
+        splash.classList.add('hidden');
+        // Remove from DOM after transition
+        setTimeout(() => {
+          splash.remove();
+        }, 500);
+      }, 500);
+    }
+  }, []);
+
   // Check for reminders and overdue tasks
   useEffect(() => {
-    // Initial check
-    notificationService.checkReminders(tasks, settings);
-    notificationService.checkOverdueTasks(tasks, settings);
-
-    // Set up interval to check every 10 seconds
-    const interval = setInterval(() => {
+    const checkAll = () => {
       notificationService.checkReminders(tasks, settings);
       notificationService.checkOverdueTasks(tasks, settings);
-    }, 10000);
+    };
 
-    return () => clearInterval(interval);
+    // Initial check
+    checkAll();
+
+    // Set up interval to check every 10 seconds
+    const interval = setInterval(checkAll, 10000);
+
+    // Re-check immediately when app comes to foreground
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkAll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [tasks, settings]);
 
   // Clean up notifications when task is completed or deleted
@@ -56,7 +85,7 @@ function App() {
     <Router>
       <Layout onAddTask={() => setIsModalOpen(true)}>
         <Routes>
-          <Route path="/" element={<Home tasks={tasks} onToggle={handleToggle} onPostpone={postponeTask} onEdit={setEditingTask} />} />
+          <Route path="/" element={<Home tasks={tasks} onToggle={handleToggle} onEdit={setEditingTask} />} />
           <Route path="/calendar" element={<History tasks={tasks} />} />
           <Route path="/stats" element={<Stats tasks={tasks} />} />
           <Route path="/settings" element={<Settings />} />

@@ -135,9 +135,19 @@ const Settings: React.FC = () => {
                 label="All Notifications"
                 description="Master switch for all notifications"
                 enabled={settings.enabled}
-                onChange={(value) => updateSettings({ enabled: value })}
+                onChange={async (value) => {
+                    if (value && permissionStatus !== 'granted') {
+                        const granted = await notificationService.requestPermission();
+                        if (granted) {
+                            setPermissionStatus('granted');
+                            updateSettings({ enabled: true });
+                        }
+                    } else {
+                        updateSettings({ enabled: value });
+                    }
+                }}
                 icon={settings.enabled ? Bell : BellOff}
-                disabled={permissionStatus !== 'granted'}
+                disabled={false} // Always allow interaction to trigger permission request
             />
 
             <SettingToggle

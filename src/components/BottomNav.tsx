@@ -35,7 +35,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ onAddTask }) => {
             padding: '0 24px'
         }}>
             {/* Left items */}
-            <div style={{ display: 'flex', gap: '32px' }}>
+            <div style={{ display: 'flex', gap: '48px' }}>
                 {navItems.slice(0, 2).map(item => (
                     <Link to={item.path} key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: path === item.path ? 'var(--accent-primary)' : 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.3s' }}>
                         <item.icon size={24} strokeWidth={path === item.path ? 2.5 : 2} />
@@ -67,7 +67,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ onAddTask }) => {
             </div>
 
             {/* Right items */}
-            <div style={{ display: 'flex', gap: '32px' }}>
+            <div style={{ display: 'flex', gap: '48px' }}>
                 {navItems.slice(2, 4).map(item => (
                     <Link to={item.path} key={item.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: path === item.path ? 'var(--accent-primary)' : 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.3s' }}>
                         <item.icon size={24} strokeWidth={path === item.path ? 2.5 : 2} />

@@ -32,11 +32,9 @@ export const useTasks = () => {
         dueDate?: string,
         dueTime?: string,
         description?: string,
-        reminder?: string
+        reminder?: string,
+        recurring?: boolean
     ) => {
-
-        // If reminder string is passed directly use it, otherwise calculate if autoRemind was passed as boolean (backwards compat but I will remove autoRemind arg)
-        // Actually, let's just use the reminder string directly as the single source of truth now.
 
         const newTask: Task = {
             id: uuidv4(),
@@ -47,23 +45,73 @@ export const useTasks = () => {
             dueDate,
             dueTime,
             status: 'pending',
-            reminder, // Use passed reminder directly
+            reminder,
+            recurring,
             createdAt: new Date().toISOString()
         };
         setTasks(prev => [newTask, ...prev]);
     };
 
     const toggleTask = (id: string) => {
-        setTasks(prev => prev.map(t => {
-            if (t.id !== id) return t;
+        setTasks(prev => {
+            const task = prev.find(t => t.id === id);
+            if (!task) return prev;
 
-            const newStatus: TaskStatus = t.status === 'completed' ? 'pending' : 'completed';
-            return {
-                ...t,
-                status: newStatus,
-                completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined
-            };
-        }));
+            const newStatus: TaskStatus = task.status === 'completed' ? 'pending' : 'completed';
+
+            // If completing a recurring task, create a new one for tomorrow
+            if (newStatus === 'completed' && task.recurring && task.dueDate) {
+                const tomorrow = new Date(task.dueDate);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+                // Calculate new reminder if task had one
+                let newReminder: string | undefined;
+                if (task.reminder && task.dueDate && task.dueTime) {
+                    const dueDateTime = new Date(`${tomorrowStr}T${task.dueTime}`);
+                    let minutesToSubtract = 0;
+                    switch (task.priority) {
+                        case 'high': minutesToSubtract = 30; break;
+                        case 'medium': minutesToSubtract = 60; break;
+                        case 'low': minutesToSubtract = 120; break;
+                    }
+                    const reminderTime = new Date(dueDateTime.getTime() - minutesToSubtract * 60000);
+                    newReminder = reminderTime.toISOString();
+                }
+
+                const recurringTask: Task = {
+                    id: uuidv4(),
+                    title: task.title,
+                    description: task.description,
+                    priority: task.priority,
+                    category: task.category,
+                    dueDate: tomorrowStr,
+                    dueTime: task.dueTime,
+                    status: 'pending',
+                    reminder: newReminder,
+                    recurring: true,
+                    createdAt: new Date().toISOString()
+                };
+
+                return [
+                    recurringTask,
+                    ...prev.map(t => t.id === id ? {
+                        ...t,
+                        status: newStatus,
+                        completedAt: new Date().toISOString()
+                    } : t)
+                ];
+            }
+
+            return prev.map(t => {
+                if (t.id !== id) return t;
+                return {
+                    ...t,
+                    status: newStatus,
+                    completedAt: newStatus === 'completed' ? new Date().toISOString() : undefined
+                };
+            });
+        });
     };
 
     const postponeTask = (id: string) => {

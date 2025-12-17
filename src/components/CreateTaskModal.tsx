@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap } from 'lucide-react';
+import { X, Zap, Repeat } from 'lucide-react';
 import type { Priority, Category } from '../types';
+import { getSuggestions } from '../utils/taskSuggestions';
 
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (title: string, priority: Priority, category: Category, dueDate?: string, dueTime?: string, description?: string, reminder?: string) => void;
+    onAdd: (title: string, priority: Priority, category: Category, dueDate?: string, dueTime?: string, description?: string, reminder?: string, recurring?: boolean) => void;
 }
 
 const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAdd }) => {
@@ -19,6 +20,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
     const [dueTime, setDueTime] = useState('');
     const [autoRemind, setAutoRemind] = useState(false);
     const [reminderTime, setReminderTime] = useState('');
+    const [recurring, setRecurring] = useState(false);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
 
     // Smart suggestion calculation
     useEffect(() => {
@@ -43,13 +46,23 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
         }
     }, [dueDate, dueTime, priority, autoRemind]);
 
+    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setTitle(val);
+        setSuggestions(getSuggestions(val));
+    };
+
+    const selectSuggestion = (s: string) => {
+        setTitle(s);
+        setSuggestions([]);
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim()) return;
 
         // We pass explicit reminder time if autoRemind is checked
-        onAdd(title, priority, category, dueDate || undefined, dueTime || undefined, description, autoRemind ? reminderTime : undefined);
+        onAdd(title, priority, category, dueDate || undefined, dueTime || undefined, description, autoRemind ? reminderTime : undefined, recurring);
 
         // Reset form
         setTitle('');
@@ -60,6 +73,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
         setDueTime('');
         setAutoRemind(false);
         setReminderTime('');
+        setRecurring(false);
+        setSuggestions([]);
         onClose();
     };
 
@@ -111,18 +126,55 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
                         </div>
 
                         <form onSubmit={handleSubmit}>
-                            <input
-                                type="text"
-                                placeholder="What needs to be done?"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                autoFocus
-                                style={{
-                                    width: '100%', background: 'transparent', border: 'none',
-                                    fontSize: '18px', marginBottom: '16px', padding: '8px 0',
-                                    borderBottom: '1px solid var(--bg-tertiary)', color: 'white'
-                                }}
-                            />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    placeholder="What needs to be done?"
+                                    value={title}
+                                    onChange={handleTitleChange}
+                                    autoFocus
+                                    style={{
+                                        width: '100%', background: 'transparent', border: 'none',
+                                        fontSize: '18px', marginBottom: '16px', padding: '8px 0',
+                                        borderBottom: '1px solid var(--bg-tertiary)', color: 'white'
+                                    }}
+                                />
+                                {suggestions.length > 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        background: 'var(--bg-secondary)',
+                                        border: '1px solid var(--bg-tertiary)',
+                                        borderRadius: '0 0 12px 12px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                        zIndex: 10,
+                                        marginTop: '-16px',
+                                        overflow: 'hidden'
+                                    }}>
+                                        {suggestions.map((s, index) => (
+                                            <div
+                                                key={index}
+                                                onClick={() => selectSuggestion(s)}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    color: 'var(--text-secondary)',
+                                                    background: 'rgba(255,255,255,0.02)',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                            >
+                                                {s}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
                             <textarea
                                 placeholder="Description (optional)"
@@ -157,7 +209,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
                                             style={{
                                                 padding: '8px 16px',
                                                 borderRadius: '20px',
-                                                border: `1px solid ${category === c ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} `,
+                                                border: `1px solid ${category === c ? 'var(--accent-primary)' : 'var(--bg-tertiary)'}`,
                                                 background: category === c ? 'var(--accent-primary)' : 'transparent',
                                                 color: category === c ? 'white' : 'var(--text-secondary)',
                                                 whiteSpace: 'nowrap',
@@ -180,7 +232,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
                                             onClick={() => setPriority(p)}
                                             style={{
                                                 flex: 1, padding: '12px', borderRadius: '12px',
-                                                border: `1px solid ${priority === p ? 'var(--accent-primary)' : 'var(--bg-tertiary)'} `,
+                                                border: `1px solid ${priority === p ? 'var(--accent-primary)' : 'var(--bg-tertiary)'}`,
                                                 background: priority === p ? 'rgba(139, 92, 246, 0.2)' : 'var(--bg-tertiary)',
                                                 color: priority === p ? 'var(--accent-primary)' : 'var(--text-secondary)',
                                                 textTransform: 'capitalize', fontWeight: priority === p ? 600 : 400
@@ -191,6 +243,35 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onAd
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Recurring Task Toggle */}
+                            {dueDate && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div
+                                        onClick={() => setRecurring(!recurring)}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            background: recurring ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-tertiary)',
+                                            border: `1px solid ${recurring ? 'var(--accent-info)' : 'transparent'} `,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            cursor: 'pointer'
+                                        }}>
+                                        <div style={{ color: recurring ? 'var(--accent-info)' : 'var(--text-secondary)' }}>
+                                            <Repeat size={20} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '14px', fontWeight: 500, color: recurring ? 'var(--accent-info)' : 'var(--text-primary)' }}>Repeat Daily</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                Task will reappear daily when completed
+                                            </div>
+                                        </div>
+                                        {recurring && <Checkmark />}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Smart Reminder Toggle */}
                             {dueDate && (

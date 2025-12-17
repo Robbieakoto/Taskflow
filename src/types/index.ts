@@ -14,4 +14,5 @@ export interface Task {
     completedAt?: string;
     reminder?: string; // ISO Date string for reminder
     createdAt: string;
+    recurring?: boolean; // Daily recurring task
 }

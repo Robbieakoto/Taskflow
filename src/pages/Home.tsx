@@ -2,18 +2,19 @@ import React, { useMemo } from 'react';
 import type { Task } from '../types';
 import TaskCard from '../components/TaskCard';
 import { AlertCircle, Calendar, Layers } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface HomeProps {
     tasks: Task[];
     onToggle: (id: string) => void;
-    onPostpone: (id: string) => void;
     onEdit: (task: Task) => void;
 }
 
-const Home: React.FC<HomeProps> = ({ tasks, onToggle, onPostpone, onEdit }) => {
+const Home: React.FC<HomeProps> = ({ tasks, onToggle, onEdit }) => {
     const { overdue, today, upcoming, noDate, completed } = useMemo(() => {
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        // Use local date for comparison to match input dates
+        const todayStr = format(now, 'yyyy-MM-dd');
 
         const groups = {
             overdue: [] as Task[],
@@ -25,7 +26,16 @@ const Home: React.FC<HomeProps> = ({ tasks, onToggle, onPostpone, onEdit }) => {
 
         tasks.forEach(task => {
             if (task.status === 'completed') {
-                groups.completed.push(task);
+                if (task.completedAt) {
+                    const completedTime = new Date(task.completedAt).getTime();
+                    // Show completed tasks for 1 hour (3600000 ms)
+                    if (now.getTime() - completedTime < 3600000) {
+                        groups.completed.push(task);
+                    }
+                } else {
+                    // Fallback for tasks without completedAt (shouldn't happen with new logic but safe to keep)
+                    groups.completed.push(task);
+                }
                 return;
             }
 
@@ -86,17 +96,21 @@ const Home: React.FC<HomeProps> = ({ tasks, onToggle, onPostpone, onEdit }) => {
                     {title} ({items.length})
                 </h2>
                 {items.map(task => (
-                    <TaskCard key={task.id} task={task} onToggle={onToggle} onPostpone={onPostpone} onEdit={onEdit} />
+                    <TaskCard key={task.id} task={task} onToggle={onToggle} onEdit={onEdit} />
                 ))}
             </div>
         );
     };
 
     const totalPending = overdue.length + today.length + upcoming.length + noDate.length;
+    const todayDate = format(new Date(), 'EEEE, MMMM do');
 
     return (
         <div className="fade-in">
             <header style={{ marginBottom: '32px', paddingTop: '10px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 600, marginBottom: '8px' }}>
+                    {todayDate}
+                </div>
                 <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     Daily Overview
                 </h1>
@@ -123,7 +137,7 @@ const Home: React.FC<HomeProps> = ({ tasks, onToggle, onPostpone, onEdit }) => {
                     <div style={{ marginTop: '20px', opacity: 0.8 }}>
                         <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '16px', letterSpacing: '1px', textTransform: 'uppercase' }}>Completed</h2>
                         {completed.map(task => (
-                            <TaskCard key={task.id} task={task} onToggle={onToggle} onPostpone={onPostpone} onEdit={onEdit} />
+                            <TaskCard key={task.id} task={task} onToggle={onToggle} onEdit={onEdit} />
                         ))}
                     </div>
                 )}

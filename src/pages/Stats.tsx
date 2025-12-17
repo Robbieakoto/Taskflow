@@ -11,8 +11,13 @@ const Stats: React.FC<StatsProps> = ({ tasks }) => {
     const pending = tasks.filter(t => t.status === 'pending').length;
     const postponed = tasks.filter(t => t.status === 'postponed').length;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const completedToday = tasks.filter(t => t.status === 'completed' && t.completedAt?.startsWith(todayStr)).length;
+    // Use local date comparison for "Today"
+    const now = new Date();
+    const completedToday = tasks.filter(t => {
+        if (t.status !== 'completed' || !t.completedAt) return false;
+        const taskDate = new Date(t.completedAt);
+        return taskDate.toDateString() === now.toDateString();
+    }).length;
 
     const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -39,13 +44,21 @@ const Stats: React.FC<StatsProps> = ({ tasks }) => {
                 {Array.from({ length: 7 }).map((_, i) => {
                     const d = new Date();
                     d.setDate(d.getDate() - (6 - i));
-                    const dateStr = d.toISOString().split('T')[0];
-                    const count = tasks.filter(t => t.status === 'completed' && t.completedAt?.startsWith(dateStr)).length;
+
+                    const count = tasks.filter(t => {
+                        if (t.status !== 'completed' || !t.completedAt) return false;
+                        const taskDate = new Date(t.completedAt);
+                        return taskDate.toDateString() === d.toDateString();
+                    }).length;
+
                     const max = Math.max(1, ...Array.from({ length: 7 }).map((_, j) => {
                         const d2 = new Date();
                         d2.setDate(d2.getDate() - (6 - j));
-                        const ds = d2.toISOString().split('T')[0];
-                        return tasks.filter(t => t.status === 'completed' && t.completedAt?.startsWith(ds)).length;
+                        return tasks.filter(t => {
+                            if (t.status !== 'completed' || !t.completedAt) return false;
+                            const taskDate = new Date(t.completedAt);
+                            return taskDate.toDateString() === d2.toDateString();
+                        }).length;
                     }));
 
                     const height = (count / max) * 100;
