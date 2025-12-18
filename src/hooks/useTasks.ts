@@ -76,7 +76,9 @@ export const useTasks = () => {
                         case 'low': minutesToSubtract = 120; break;
                     }
                     const reminderTime = new Date(dueDateTime.getTime() - minutesToSubtract * 60000);
-                    newReminder = reminderTime.toISOString();
+                    // Format as local ISO string
+                    const offset = reminderTime.getTimezoneOffset() * 60000;
+                    newReminder = new Date(reminderTime.getTime() - offset).toISOString().slice(0, 16);
                 }
 
                 const recurringTask: Task = {

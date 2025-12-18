@@ -103,7 +103,17 @@ const Home: React.FC<HomeProps> = ({ tasks, onToggle, onEdit }) => {
     };
 
     const totalPending = overdue.length + today.length + upcoming.length + noDate.length;
-    const todayDate = format(new Date(), 'EEEE, MMMM do');
+
+    const now = new Date();
+    const todayDate = format(now, 'EEEE, MMMM do');
+    const currentHour = now.getHours();
+
+    let greeting = 'Good morning';
+    if (currentHour >= 12 && currentHour < 17) {
+        greeting = 'Good afternoon';
+    } else if (currentHour >= 17) {
+        greeting = 'Good evening';
+    }
 
     return (
         <div className="fade-in">
@@ -112,7 +122,7 @@ const Home: React.FC<HomeProps> = ({ tasks, onToggle, onEdit }) => {
                     {todayDate}
                 </div>
                 <h1 style={{ fontSize: '32px', fontWeight: 800, background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Daily Overview
+                    {greeting}
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '16px' }}>
                     You have <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{totalPending}</span> pending tasks.

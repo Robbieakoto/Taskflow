@@ -53,8 +53,10 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onUpdate
 
             const calculated = new Date(dueDateTime.getTime() - minutesToSubtract * 60000);
 
-            // Format for datetime-local input (YYYY-MM-DDTHH:mm)
-            setReminderTime(calculated.toISOString().slice(0, 16));
+            // Format for datetime-local input (YYYY-MM-DDTHH:mm) - Use local time
+            const offset = calculated.getTimezoneOffset() * 60000;
+            const localDate = new Date(calculated.getTime() - offset);
+            setReminderTime(localDate.toISOString().slice(0, 16));
         } else if (!autoRemind) {
             setReminderTime('');
         }

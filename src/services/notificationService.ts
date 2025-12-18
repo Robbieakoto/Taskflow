@@ -13,6 +13,34 @@ class NotificationService {
     private notifiedReminders = new Set<string>();
     private notifiedOverdue = new Set<string>();
 
+    constructor() {
+        this.loadNotifiedState();
+    }
+
+    private loadNotifiedState() {
+        try {
+            const reminders = localStorage.getItem('taskflow_notified_reminders');
+            if (reminders) {
+                this.notifiedReminders = new Set(JSON.parse(reminders));
+            }
+            const overdue = localStorage.getItem('taskflow_notified_overdue');
+            if (overdue) {
+                this.notifiedOverdue = new Set(JSON.parse(overdue));
+            }
+        } catch (e) {
+            console.error('Failed to load notification state', e);
+        }
+    }
+
+    private saveNotifiedState() {
+        try {
+            localStorage.setItem('taskflow_notified_reminders', JSON.stringify(Array.from(this.notifiedReminders)));
+            localStorage.setItem('taskflow_notified_overdue', JSON.stringify(Array.from(this.notifiedOverdue)));
+        } catch (e) {
+            console.error('Failed to save notification state', e);
+        }
+    }
+
     async requestPermission(): Promise<boolean> {
         if (!('Notification' in window)) {
             console.log('This browser does not support notifications');
@@ -86,9 +114,7 @@ class NotificationService {
                 }, settings);
 
                 this.notifiedReminders.add(task.id);
-
-                // Clean up after 5 minutes to allow re-notification if needed
-                setTimeout(() => this.notifiedReminders.delete(task.id), 5 * 60 * 1000);
+                this.saveNotifiedState();
             }
         });
     }
@@ -121,9 +147,7 @@ class NotificationService {
                 }, settings);
 
                 this.notifiedOverdue.add(task.id);
-
-                // Keep in memory for 24 hours to avoid repeated notifications
-                setTimeout(() => this.notifiedOverdue.delete(task.id), 24 * 60 * 60 * 1000);
+                this.saveNotifiedState();
             }
         });
     }
@@ -131,6 +155,7 @@ class NotificationService {
     clearNotifiedTask(taskId: string): void {
         this.notifiedReminders.delete(taskId);
         this.notifiedOverdue.delete(taskId);
+        this.saveNotifiedState();
     }
 }
 

@@ -11,6 +11,7 @@ import InstallPWA from './components/InstallPWA';
 import { useTasks } from './hooks/useTasks';
 import { useNotificationSettings } from './hooks/useNotificationSettings';
 import { notificationService } from './services/notificationService';
+import { registerSW } from 'virtual:pwa-register';
 import type { Task } from './types';
 
 function App() {
@@ -18,6 +19,19 @@ function App() {
   const { settings } = useNotificationSettings();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  // PWA Update handling
+  useEffect(() => {
+    registerSW({
+      onNeedRefresh() {
+        setUpdateAvailable(true);
+      },
+      onOfflineReady() {
+        console.log('App ready to work offline');
+      }
+    });
+  }, []);
 
   // Request notification permission on mount
   // Permissions are now handled in Settings page on user interaction
@@ -53,8 +67,8 @@ function App() {
     // Initial check
     checkAll();
 
-    // Set up interval to check every 10 seconds
-    const interval = setInterval(checkAll, 10000);
+    // Set up interval to check every minute
+    const interval = setInterval(checkAll, 60000);
 
     // Re-check immediately when app comes to foreground
     const handleVisibilityChange = () => {
@@ -81,6 +95,13 @@ function App() {
     notificationService.clearNotifiedTask(id);
   };
 
+  const handleUpdate = (id: string, updates: Partial<Task>) => {
+    updateTask(id, updates);
+    if (updates.reminder) {
+      notificationService.clearNotifiedTask(id);
+    }
+  };
+
   return (
     <Router>
       <Layout onAddTask={() => setIsModalOpen(true)}>
@@ -92,6 +113,42 @@ function App() {
         </Routes>
         <InstallPWA />
       </Layout>
+
+      {/* Update Banner */}
+      {updateAvailable && (
+        <div style={{
+          position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-secondary)', border: '1px solid var(--accent-primary)',
+          padding: '12px 24px', borderRadius: '50px',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)', zIndex: 2000,
+          width: '90%', maxWidth: '400px'
+        }}>
+          <div style={{ flex: 1, fontSize: '14px', fontWeight: 500 }}>
+            New version available
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: 'var(--accent-primary)', color: 'white',
+              border: 'none', padding: '8px 16px', borderRadius: '20px',
+              fontWeight: 600, fontSize: '12px'
+            }}
+          >
+            Update
+          </button>
+          <button
+            onClick={() => setUpdateAvailable(false)}
+            style={{
+              background: 'transparent', color: 'var(--text-secondary)',
+              border: 'none', padding: '4px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <CreateTaskModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -100,7 +157,7 @@ function App() {
       <EditTaskModal
         isOpen={!!editingTask}
         onClose={() => setEditingTask(null)}
-        onUpdate={updateTask}
+        onUpdate={handleUpdate}
         onDelete={handleDelete}
         task={editingTask}
       />
